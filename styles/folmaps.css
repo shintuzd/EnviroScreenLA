@@ -1,0 +1,96 @@
+#header{
+    grid-area: header;
+    grid-template-areas: "title placeforbuttons";
+}
+
+#title{
+    grid-area: title;
+    text-align: center;
+}
+
+#title h2{
+    font-size: 14pt;
+    font-weight: 200;
+}
+
+#placeforbuttons{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 10px;
+}
+
+.map-button{
+    margin: 10px;
+}
+
+.selected-button {
+    background-color: gray;
+    color: white;
+}
+
+/* White Map*/ 
+#map_efcf9fb775434fdba6df1da2dc5945e0 {
+    position: relative;
+    width: 80.0%;
+    height: 80.0%;
+    left: 0.0%;
+    top: 0.0%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* AAPI Map*/ 
+#map_2f39fda8a69348c79509a259017b6a75 {
+    position: relative;
+    width: 80.0%;
+    height: 80.0%;
+    left: 0.0%;
+    top: 0.0%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* AfAm Map*/ 
+#map_d7cd6eb71445423786b13d3164f7b47f {
+    position: relative;
+    width: 80.0%;
+    height: 80.0%;
+    left: 0.0%;
+    top: 0.0%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Hispanic Map*/ 
+#map_f421a60383cc45c0a55321430171f053 {
+    position: relative;
+    width: 80.0%;
+    height: 80.0%;
+    left: 0.0%;
+    top: 0.0%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Native Map*/
+#map_7d1bf2e5553046d880cc21058690cb9a {
+    position: relative;
+    width: 80.0%;
+    height: 80.0%;
+    left: 0.0%;
+    top: 0.0%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.foliumtooltip table{
+    margin: auto;
+}
+.foliumtooltip tr{
+    text-align: left;
+}
+.foliumtooltip th{
+    padding: 2px; padding-right: 8px;
+}
