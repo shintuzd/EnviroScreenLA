@@ -1,42 +1,6 @@
 L_NO_TOUCH = false;
 L_DISABLE_3D = false;
 
-document.addEventListener('DOMContentLoaded', () => {
-    const defaultMapId = mapDivs[0].id;
-
-    // Show the first map by default
-    mapDivs.forEach(mapDiv => {
-        if (mapDiv.id === defaultMapId) {
-            mapDiv.style.display = 'block';
-        } else {
-            mapDiv.style.display = 'none';
-        }
-    });
-
-    // Add event listeners to the buttons
-    mapButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const mapId = button.getAttribute('data-map-id');
-            mapDivs.forEach(mapDiv => {
-                if (mapDiv.id === mapId) {
-                    mapDiv.style.display = 'block';
-                } else {
-                    mapDiv.style.display = 'none';
-                }
-            });
-
-            // Add and remove the selected-button class
-            mapButtons.forEach(b => {
-                if (b === button) {
-                    b.classList.add('selected-button');
-                } else {
-                    b.classList.remove('selected-button');
-                }
-            });
-        });
-    });
-});
-
 
 var map_d7cd6eb71445423786b13d3164f7b47f = L.map(
     "map_d7cd6eb71445423786b13d3164f7b47f",

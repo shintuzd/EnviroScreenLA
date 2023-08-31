@@ -2,11 +2,7 @@
 <head>    
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    
     <link rel="stylesheet" href="styles/folmaps.css">
-
-    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
-    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
@@ -18,7 +14,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-     
 </head>
 
 <body> 
@@ -27,7 +22,7 @@
             <h1> EnviroScreen LA </h1>
             <h2> This data is from <a href='https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40'> CalEnviroScreen 4.0</a>, which uses 2010 Census Boundaries and 2019 5-Year ACS Estimates.</h2>
         </div>
-
+            <h2 id="section"> Demographic Profile </h2>
             <div id="placeforbuttons">
                 <button class="map-button" data-map-id="map_d7cd6eb71445423786b13d3164f7b47f">% African American</button>
                 <button class="map-button" data-map-id="map_2f39fda8a69348c79509a259017b6a75">% AAPI</button>
@@ -42,12 +37,62 @@
             <div class="folium-map" id="map_7d1bf2e5553046d880cc21058690cb9a" ></div>
             <div class="folium-map" id="map_efcf9fb775434fdba6df1da2dc5945e0" ></div>
 
+            <h2 id="section"> Pollution Indicators</h2>
+            <div id="placeforbuttons2">
+                <button class="map-button2" data-map-id="map_9acf68a64ed244d8931024f2e1b05d33">CIscore</button>
+                <button class="map-button2" data-map-id="map_26db29ca04c24e94947c014c81552de9">Ozone</button>
+                <button class="map-button2" data-map-id="map_55ded42fbff4445fa52d81768388d398">PM2.5</button>
+                <button class="map-button2" data-map-id="map_5c4fea4980f74341b44429e02321ea3f">Diesel Pariculate Matter</button>
+                <button class="map-button2" data-map-id="map_ce7ca56006074fe5b5ec0184171abad7">Drinking Water Contaminants</button>
+                <button class="map-button2" data-map-id="map_5bddace21c2441f6abef938e40f67291">Children's Lead Risk from Housing</button>
+                <button class="map-button2" data-map-id="map_dab78e0e985f4704a84f98fb8bdc3be9">Pesticide Use</button>
+                <button class="map-button2" data-map-id="map_6a3eafc529384eb5baa96bb86e5eaa36">Toxic Releases from Facilities</button>
+                <button class="map-button2" data-map-id="map_b742c6ce37da41fc87fc7a43fe5c666d">Traffic Impacts</button>
+                <button class="map-button2" data-map-id="map_9a63eaa28ce045ddb1b44b00c7b5c233">Cleanup Sites</button>
+                <button class="map-button2" data-map-id="map_ba9f3cd7dafb431bb93b78e2de67965d">Groundwater Threats</button>
+                <button class="map-button2" data-map-id="map_d1701c17cfb14164979b0edd74ca45e7">Hazardous Waste</button>
+                <button class="map-button2" data-map-id="map_da03fe2c93c24eccb96b8f257954bab4">Pollution Burden</button>
+                <button class="map-button2" data-map-id="map_7aa50130404845f18616fbee56f1f4b7">Impaired Waters</button>
+                <button class="map-button2" data-map-id="map_ab0d628c0e44479f9185ede8e4fc2331">Solid Waste</button>
+            </div>
+            <div class="folium-map2" id="map_9acf68a64ed244d8931024f2e1b05d33" ></div>
+            <div class="folium-map2" id="map_26db29ca04c24e94947c014c81552de9" ></div>
+            <div class="folium-map2" id="map_55ded42fbff4445fa52d81768388d398" ></div>
+            <div class="folium-map2" id="map_5c4fea4980f74341b44429e02321ea3f" ></div>
+            <div class="folium-map2" id="map_ce7ca56006074fe5b5ec0184171abad7" ></div>
+            <div class="folium-map2" id="map_5bddace21c2441f6abef938e40f67291" ></div>
+            <div class="folium-map2" id="map_dab78e0e985f4704a84f98fb8bdc3be9" ></div>
+            <div class="folium-map2" id="map_6a3eafc529384eb5baa96bb86e5eaa36" ></div>
+            <div class="folium-map2" id="map_b742c6ce37da41fc87fc7a43fe5c666d" ></div>
+            <div class="folium-map2" id="map_9a63eaa28ce045ddb1b44b00c7b5c233" ></div>
+            <div class="folium-map2" id="map_ba9f3cd7dafb431bb93b78e2de67965d" ></div>
+            <div class="folium-map2" id="map_d1701c17cfb14164979b0edd74ca45e7" ></div>
+            <div class="folium-map2" id="map_da03fe2c93c24eccb96b8f257954bab4" ></div>
+            <div class="folium-map2" id="map_7aa50130404845f18616fbee56f1f4b7" ></div>
+            <div class="folium-map2" id="map_ab0d628c0e44479f9185ede8e4fc2331" ></div>
             
     <script src="js/afammap.js"></script>
     <script src="js/aapimap.js"></script>
     <script src="js/hispanic.js"></script>
     <script src="js/nativemap.js"></script>
     <script src="js/whitemap.js"></script>
+
+    <script src="js/dieselmap.js"></script>
+    <script src="js/drinkwatmap.js"></script>
+    <script src="js/leadmap.js"></script>
+    <script src="js/toxrelmap.js"></script>
+    <script src="js/gwthreatmap.js"></script>
+    <script src="js/hazwastemap.js"></script>
+    <script src="js/ozonemap.js"></script>
+    <script src="js/trafficmap.js"></script>
+    <script src="js/pesticidemap.js"></script>
+    <script src="js/pm25map.js"></script>
+    <script src="js/polburdmap.js"></script>
+    <script src="js/solwastemap.js"></script>
+    <script src="js/CIscoremap.js"></script>
+    <script src="js/cleanup.js"></script>
+    <script src="js/impwatermap.js"></script>
+    <script src="js/button.js"></script>
 
 </body>
 
