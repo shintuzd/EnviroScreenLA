@@ -70,3 +70,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+const mapButtons3 = document.querySelectorAll('.map-button3');
+const mapDivs3 = document.querySelectorAll('.folium-map3');
+
+    // Show the first map in the second section
+    const defaultMapId3 = mapDivs3[0].id;
+    mapDivs3.forEach(mapDiv3 => {
+        if (mapDiv3.id === defaultMapId3) {
+            mapDiv3.style.display = 'block';
+        } else {
+            mapDiv3.style.display = 'none';
+        }
+    });
+
+    mapButtons3.forEach(button => {
+        button.addEventListener('click', () => {
+            const mapId = button.getAttribute('data-map-id');
+            mapDivs3.forEach(mapDiv => {
+                if (mapDiv.id === mapId) {
+                    mapDiv.style.display = 'block';
+                } else {
+                    mapDiv.style.display = 'none';
+                }
+            });
+
+            mapButtons3.forEach(b => {
+                if (b === button) {
+                    b.classList.add('selected-button');
+                } else {
+                    b.classList.remove('selected-button');
+                }
+            });
+        });
+    });
