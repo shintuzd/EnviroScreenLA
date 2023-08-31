@@ -1,3 +1,5 @@
+L_NO_TOUCH = false;
+L_DISABLE_3D = false;
 
 var map_25f668772bb24b059764c7a612286ac9 = L.map(
     "map_25f668772bb24b059764c7a612286ac9",
