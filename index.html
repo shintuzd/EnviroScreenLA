@@ -1,132 +1,372 @@
-<!DOCTYPE html>
-<head>    
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="styles/folmaps.css">
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EnviroScreen LA | Mohammed Azad</title>
+<meta name="description" content="Explore CalEnviroScreen 5.0 indicators across City of Los Angeles census tracts, with filters and side-by-side comparison.">
+<link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+  /* app-specific styles; tokens (--text, --muted, --border, --accent, --radius, --font) come from the site stylesheet */
+  :root { --panel:#fff; --line:var(--border); --cat:#9a3412; }
+  html, body { height:100%; }
+  body { height:100vh; min-height:0; overflow:hidden; }
+  .app { flex:1; min-height:0; display:flex; }
+  aside { width:350px; flex:none; background:var(--panel); border-right:1px solid var(--border); overflow-y:auto; padding:1.25rem; font-size:14px; line-height:1.45; }
+  #maps { flex:1; min-width:0; display:flex; position:relative; }
+  .mapctl { position:absolute; top:10px; right:10px; z-index:2000; background:#fff; border:1px solid var(--card-border); border-radius:var(--radius); padding:8px 12px; box-shadow:0 2px 8px rgba(17,17,17,.12); }
+  .split .mapctl { top:66px; }
+  .seg[hidden] { display:none; }
+  .pane { flex:1; min-width:0; display:flex; flex-direction:column; border-left:2px solid #fff; }
+  .pane:first-of-type { border-left:0; }
+  .map { flex:1; min-height:0; font-family:var(--font); }
+  .ptitle { display:none; padding:6px 12px; font-size:13px; background:var(--panel); border-top:4px solid var(--c, #888); cursor:pointer; color:var(--text-strong); }
+  .split .ptitle { display:block; }
+  .ptitle small { display:block; color:var(--muted); font-size:11.5px; }
+  .pane.active .ptitle { background:#fff; }
+  .pane:not(.active) .ptitle { opacity:.75; }
+  .pane[hidden] { display:none; }
+
+  aside h1 { font-size:1.6rem; font-weight:700; letter-spacing:-0.02em; line-height:1.15; margin:0 0 .35rem; color:var(--text-strong); }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 .5rem; }
+  aside h2 { font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--subtle); margin:1.5rem 0 .6rem; }
+  .gname { font-size:13px; font-weight:600; color:var(--text-strong); margin:1rem 0 .55rem; display:flex; align-items:center; gap:7px; }
+  .gname::before { content:""; width:10px; height:10px; border-radius:50%; background:var(--c); }
+  .gnote { font-size:12px; color:var(--muted); margin:-.2rem 0 .55rem; line-height:1.4; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  button.chip { font:inherit; font-size:.82rem; font-weight:600; padding:.3rem .8rem; border:1px solid var(--border); border-radius:50px; background:#fff; color:#5d6b7a; cursor:pointer; transition:all .15s ease; }
+  button.chip:hover { border-color:var(--c); color:var(--text-strong); }
+  button.chip[aria-pressed="true"] { background:color-mix(in srgb, var(--c) 13%, #fff); border-color:var(--c); color:var(--c); }
+  :focus-visible { outline:2px solid var(--cat); outline-offset:2px; border-radius:4px; }
+
+  .filter { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+  .filter label { display:flex; justify-content:space-between; font-size:13px; }
+  input[type=range] { width:100%; accent-color:var(--cat); }
+  .row { display:flex; gap:8px; align-items:center; margin-top:8px; font-size:13px; }
+  input[type=search] { font:inherit; font-size:14px; width:100%; padding:.5rem .9rem; border:1px solid var(--border); border-radius:50px; background:#fff; color:var(--text); }
+  input[type=search]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  #pctNote { font-size:12.5px; margin:10px 0 0; padding:8px 10px; border-radius:8px; background:color-mix(in srgb, var(--cat) 10%, #fff); border-left:4px solid var(--cat); color:var(--text); }
+  #desc { font-size:12.5px; color:var(--muted); margin:.7rem 0 0; }
+  #stats { font-size:13px; margin-top:8px; }
+  .seg { display:flex; margin-top:8px; border:1px solid var(--border); border-radius:50px; overflow:hidden; background:#fff; }
+  .seg button { flex:1; white-space:nowrap; font:inherit; font-size:.82rem; font-weight:600; padding:.3rem .8rem; border:0; background:#fff; color:#5d6b7a; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:color-mix(in srgb, var(--cat) 13%, #fff); color:var(--cat); }
+  #details { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; font-size:13px; min-height:52px; }
+  #details table { width:100%; border-collapse:collapse; margin-top:6px; }
+  #details td { padding:2px 0; } #details td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  #details tr.gh td { padding-top:10px; font-weight:700; font-size:12px; color:var(--c); }
+  .legend { background:#fff; color:var(--text); padding:8px 12px; border-radius:var(--radius); box-shadow:0 2px 8px rgba(17,17,17,.12); font-size:12px; font-family:var(--font); }
+  .legend .bar { width:190px; height:10px; border-radius:2px; margin:4px 0 2px; }
+  .legend .ends { display:flex; justify-content:space-between; color:var(--muted); }
+  .foot { font-size:12px; color:var(--muted); margin:1.5rem 0 0; }
+  .foot a { color:var(--accent); }
+  .credit { border-top:1px solid var(--border); padding-top:1rem; margin-top:1rem; }
+  @media (max-width:760px) {
+    .app { flex-direction:column-reverse; }
+    aside { width:100%; height:48%; border-right:0; border-top:1px solid var(--border); }
+    #maps { height:52%; flex:none; }
+    #maps.split { flex-direction:column; }
+    .pane { border-left:0; border-top:2px solid #fff; }
+  }
+</style>
 </head>
+<body>
+<div class="app">
+<aside>
+  <h1>EnviroScreen LA</h1>
+  <p class="sub">CalEnviroScreen 5.0 on the City of Los Angeles' 2020 census tracts</p>
 
-<body> 
-    <div id="header">
-        <div id="title">
-            <h1> EnviroScreen LA </h1>
-            <h2> This data is from <a href='https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40'> CalEnviroScreen 4.0</a>, which uses 2010 Census Boundaries and 2019 5-Year ACS Estimates.</h2>
-        </div>
-            <h2 id="section"> Demographic Profile </h2>
-            <div id="placeforbuttons">
-                <button class="map-button" data-map-id="map_d7cd6eb71445423786b13d3164f7b47f">% African American</button>
-                <button class="map-button" data-map-id="map_2f39fda8a69348c79509a259017b6a75">% AAPI</button>
-                <button class="map-button" data-map-id="map_f421a60383cc45c0a55321430171f053">% Hispanic</button>
-                <button class="map-button" data-map-id="map_7d1bf2e5553046d880cc21058690cb9a">% Native American</button>
-                <button class="map-button" data-map-id="map_efcf9fb775434fdba6df1da2dc5945e0">% White</button>
-            </div>
-     </div> 
-            <div class="folium-map" id="map_d7cd6eb71445423786b13d3164f7b47f" ></div>
-            <div class="folium-map" id="map_2f39fda8a69348c79509a259017b6a75" ></div>
-            <div class="folium-map" id="map_f421a60383cc45c0a55321430171f053" ></div>
-            <div class="folium-map" id="map_7d1bf2e5553046d880cc21058690cb9a" ></div>
-            <div class="folium-map" id="map_efcf9fb775434fdba6df1da2dc5945e0" ></div>
-            
-            <h2 id="section"> Population Characteristics Percentiles</h2>
-            <div id="placeforbuttons3">
-                <button class="map-button3" data-map-id="map_a05cde2b7d874d33b39b50f9a113fc06">Asthma</button>
-                <button class="map-button3" data-map-id="map_129666451aa044e5bc684225a6f91769">Cardiovasular Disease</button>
-                <button class="map-button3" data-map-id="map_f998f7255f354b4a9fcadd2eb8e941d3">Education</button>
-                <button class="map-button3" data-map-id="map_d409fb704c0a485082e57c525ec8c927">Housing Burden</button>
-                <button class="map-button3" data-map-id="map_6bcbeb3a9f114c61aa354f7fcdd94607">Linguistic Isolation</button>
-                <button class="map-button3" data-map-id="map_ab67c062ee3a4343ae3a0fa91676c2e5">Low Birth Weight</button>
-                <button class="map-button3" data-map-id="map_368563494157406d99f9323669745550">Poverty</button>
-                <button class="map-button3" data-map-id="map_25f668772bb24b059764c7a612286ac9">Unemployment</button>
-            </div>
-            <div class="folium-map3" id="map_a05cde2b7d874d33b39b50f9a113fc06" ></div>
-            <div class="folium-map3" id="map_129666451aa044e5bc684225a6f91769" ></div>
-            <div class="folium-map3" id="map_f998f7255f354b4a9fcadd2eb8e941d3" ></div>
-            <div class="folium-map3" id="map_d409fb704c0a485082e57c525ec8c927" ></div>
-            <div class="folium-map3" id="map_6bcbeb3a9f114c61aa354f7fcdd94607" ></div>
-            <div class="folium-map3" id="map_ab67c062ee3a4343ae3a0fa91676c2e5" ></div>
-            <div class="folium-map3" id="map_368563494157406d99f9323669745550" ></div>
-            <div class="folium-map3" id="map_25f668772bb24b059764c7a612286ac9" ></div>
+  <h2>Indicator</h2>
+  <div id="groups"></div>
+  <p id="desc"></p>
 
-            <h2 id="section"> Pollution Indicators</h2>
-            <div id="placeforbuttons2">
-                <button class="map-button2" data-map-id="map_9acf68a64ed244d8931024f2e1b05d33">CIscore</button>
-                <button class="map-button2" data-map-id="map_26db29ca04c24e94947c014c81552de9">Ozone</button>
-                <button class="map-button2" data-map-id="map_55ded42fbff4445fa52d81768388d398">PM2.5</button>
-                <button class="map-button2" data-map-id="map_5c4fea4980f74341b44429e02321ea3f">Diesel Pariculate Matter</button>
-                <button class="map-button2" data-map-id="map_ce7ca56006074fe5b5ec0184171abad7">Drinking Water Contaminants</button>
-                <button class="map-button2" data-map-id="map_5bddace21c2441f6abef938e40f67291">Children's Lead Risk from Housing</button>
-                <button class="map-button2" data-map-id="map_dab78e0e985f4704a84f98fb8bdc3be9">Pesticide Use</button>
-                <button class="map-button2" data-map-id="map_6a3eafc529384eb5baa96bb86e5eaa36">Toxic Releases from Facilities</button>
-                <button class="map-button2" data-map-id="map_b742c6ce37da41fc87fc7a43fe5c666d">Traffic Impacts</button>
-                <button class="map-button2" data-map-id="map_9a63eaa28ce045ddb1b44b00c7b5c233">Cleanup Sites</button>
-                <button class="map-button2" data-map-id="map_ba9f3cd7dafb431bb93b78e2de67965d">Groundwater Threats</button>
-                <button class="map-button2" data-map-id="map_d1701c17cfb14164979b0edd74ca45e7">Hazardous Waste</button>
-                <button class="map-button2" data-map-id="map_da03fe2c93c24eccb96b8f257954bab4">Pollution Burden</button>
-                <button class="map-button2" data-map-id="map_7aa50130404845f18616fbee56f1f4b7">Impaired Waters</button>
-                <button class="map-button2" data-map-id="map_ab0d628c0e44479f9185ede8e4fc2331">Solid Waste</button>
-            </div>
-            <div class="folium-map2" id="map_9acf68a64ed244d8931024f2e1b05d33" ></div>
-            <div class="folium-map2" id="map_26db29ca04c24e94947c014c81552de9" ></div>
-            <div class="folium-map2" id="map_55ded42fbff4445fa52d81768388d398" ></div>
-            <div class="folium-map2" id="map_5c4fea4980f74341b44429e02321ea3f" ></div>
-            <div class="folium-map2" id="map_ce7ca56006074fe5b5ec0184171abad7" ></div>
-            <div class="folium-map2" id="map_5bddace21c2441f6abef938e40f67291" ></div>
-            <div class="folium-map2" id="map_dab78e0e985f4704a84f98fb8bdc3be9" ></div>
-            <div class="folium-map2" id="map_6a3eafc529384eb5baa96bb86e5eaa36" ></div>
-            <div class="folium-map2" id="map_b742c6ce37da41fc87fc7a43fe5c666d" ></div>
-            <div class="folium-map2" id="map_9a63eaa28ce045ddb1b44b00c7b5c233" ></div>
-            <div class="folium-map2" id="map_ba9f3cd7dafb431bb93b78e2de67965d" ></div>
-            <div class="folium-map2" id="map_d1701c17cfb14164979b0edd74ca45e7" ></div>
-            <div class="folium-map2" id="map_da03fe2c93c24eccb96b8f257954bab4" ></div>
-            <div class="folium-map2" id="map_7aa50130404845f18616fbee56f1f4b7" ></div>
-            <div class="folium-map2" id="map_ab0d628c0e44479f9185ede8e4fc2331" ></div>
+  <h2>Filter</h2>
+  <div class="filter">
+    <label for="min"><span>Minimum value</span><b id="minVal">0</b></label>
+    <input id="min" type="range" min="0" max="100" step="5" value="0">
+    <p id="pctNote"></p>
+    <div class="row"><input id="hide" type="checkbox"><label for="hide">Hide tracts below the cutoff</label></div>
+    <div id="stats"></div>
+  </div>
 
-            
-    <script src="js/afammap.js"></script>
-    <script src="js/aapimap.js"></script>
-    <script src="js/hispanic.js"></script>
-    <script src="js/nativemap.js"></script>
-    <script src="js/whitemap.js"></script>
+  <h2>Find a tract</h2>
+  <input id="search" type="search" placeholder="Tract number or ZIP code">
 
-    <script src="js/dieselmap.js"></script>
-    <script src="js/drinkwatmap.js"></script>
-    <script src="js/leadmap.js"></script>
-    <script src="js/toxrelmap.js"></script>
-    <script src="js/gwthreatmap.js"></script>
-    <script src="js/hazwastemap.js"></script>
-    <script src="js/ozonemap.js"></script>
-    <script src="js/trafficmap.js"></script>
-    <script src="js/pesticidemap.js"></script>
-    <script src="js/pm25map.js"></script>
-    <script src="js/polburdmap.js"></script>
-    <script src="js/solwastemap.js"></script>
-    <script src="js/CIscoremap.js"></script>
-    <script src="js/cleanup.js"></script>
-    <script src="js/impwatermap.js"></script>
+  <h2>Selected tract</h2>
+  <div id="details">Click a tract on the map.</div>
 
-    <script src="js/asthmamap.js"></script>
-    <script src="js/cardiomap.js"></script>
-    <script src="js/educationmap.js"></script>
-    <script src="js/houseburdmap.js"></script>
-    <script src="js/lingisolmap.js"></script>
-    <script src="js/lowbirthwt.js"></script>
-    <script src="js/poverty.js"></script>
-    <script src="js/unemployment.js"></script>
+  <p class="foot">Data: <a href="https://oehha.ca.gov/calenviroscreen" target="_blank" rel="noopener">OEHHA CalEnviroScreen 5.0</a> ·
+  Boundaries: <a href="https://geohub.lacity.org/datasets/la-city-2020-census-tracts-" target="_blank" rel="noopener">LA GeoHub 2020 census tracts</a>.
+  Percentiles compare each tract with all California tracts, not just LA (higher = more burdened).</p>
+  <p class="foot credit">Developed by Mohammed Azad (<a href="https://shintuzd.com">shintuzd.com</a>)</p>
+</aside>
 
-    <script src="js/button.js"></script>
+<main id="maps">
+  <div class="mapctl">
+    <div class="row" style="margin-top:0"><input id="splitToggle" type="checkbox"><label for="splitToggle"><b>Compare two indicators</b></label></div>
+    <div class="seg" id="seg" hidden>
+      <button data-i="0" aria-pressed="true">Edit left map</button>
+      <button data-i="1" aria-pressed="false">Edit right map</button>
+    </div>
+  </div>
+  <section class="pane active" id="pane0"><div class="ptitle"></div><div class="map" id="map0"></div></section>
+  <section class="pane" id="pane1" hidden><div class="ptitle"></div><div class="map" id="map1"></div></section>
+</main>
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+// unit: 'p' = statewide percentile, '%' = percent, 'n' = count
+const P = 'p', PCT = '%', N = 'n';
+const GROUPS = [
+  {name:'Overall', color:'#9a3412', stops:['#fff5b0','#fdb863','#e35a2d','#800f1c'], items:[
+    ['CIscoreP','CalEnviroScreen score','Overall percentile combining pollution burden and population characteristics.',P],
+    ['PollutionP','Pollution burden','Average of exposure and environmental effect indicators.',P],
+    ['PopCharP','Population characteristics','Average of sensitive population and socioeconomic factor indicators.',P]]},
+  {name:'Exposures', color:'#6d28d9', stops:['#f2ecfa','#c4a9e8','#8454c7','#3f1a7a'], items:[
+    ['ozoneP','Ozone','Ozone concentrations in air.',P],['pmP','PM2.5','Annual mean fine particulate matter concentration.',P],
+    ['dieselP','Diesel PM','Diesel particulate matter emissions.',P],['pestP','Pesticides','Pesticide use near the tract.',P],
+    ['RSEIhazP','Toxic releases','Toxicity-weighted air concentrations from toxic release facilities (RSEI).',P],
+    ['trafficP','Traffic','Traffic density near the tract.',P],['drinkP','Drinking water','Drinking water contaminant index.',P],
+    ['leadP','Lead risk (housing)','Potential risk of lead exposure from housing.',P]]},
+  {name:'Environmental effects', color:'#0f766e', stops:['#eaf7ee','#9fd8b4','#3f9f78','#0b4a3a'], items:[
+    ['cleanupsP','Cleanup sites','Proximity to toxic cleanup sites.',P],['gwthreatsP','Groundwater threats','Impaired groundwater and leaking storage sites.',P],
+    ['hazP','Hazardous waste','Hazardous waste facilities and generators.',P],['iwbP','Impaired water bodies','Impaired surface water bodies.',P],
+    ['swisP','Solid waste','Solid waste sites and facilities.',P],['SmATSP','Air toxics sites','Proximity to sites with substantial air toxics emissions.',P]]},
+  {name:'Health', color:'#be123c', stops:['#fff0f3','#fbb4c4','#e0516f','#7a0f2e'], items:[
+    ['asthmaP','Asthma','Age-adjusted rate of ER visits for asthma.',P],['lbwP','Low birth weight','Percent of live births with low birth weight.',P],
+    ['cvdP','Cardiovascular disease','ER visits for heart attacks.',P],['diabetesP','Diabetes','Prevalence of diabetes.',P]]},
+  {name:'Socioeconomic', color:'#1d4ed8', stops:['#eef4ff','#a9c6f5','#4f84d6','#14357a'], items:[
+    ['eduP','Education','Percent of adults without a high school diploma.',P],['lingP','Linguistic isolation','Households where no one over 14 speaks English well.',P],
+    ['povP','Poverty','Percent of population below twice the federal poverty level.',P],['unempP','Unemployment','Percent unemployed.',P],
+    ['housingBP','Housing burden','Low-income households spending over half of income on housing.',P]]},
+  {name:'ACS estimates', color:'#7a5c00', stops:['#fbf6dc','#e6d27a','#b59a1e','#5c4c07'],
+   note:'Raw American Community Survey (Census Bureau) estimates behind the socioeconomic indicators, plus population, age and race. These are actual values, not percentiles.', items:[
+    ['ACS2024Pop','Population','Estimated residents in the tract.',N],
+    ['edu','No HS diploma','Percent of adults without a high school diploma.',PCT],['ling','Linguistic isolation','Percent of households where no one over 14 speaks English well.',PCT],
+    ['pov','Below 2x poverty','Percent of residents with income below twice the federal poverty level.',PCT],['unemp','Unemployment','Percent of the labor force that is unemployed.',PCT],
+    ['housingB','Housing burden','Percent of low-income households spending over half of income on housing.',PCT],
+    ['pop_und10','Under 10','Percent of residents under age 10.',PCT],['pop_10_64','Age 10–64','Percent of residents aged 10 to 64.',PCT],['pop_ov64','Over 64','Percent of residents over age 64.',PCT],
+    ['hisp','Hispanic','Percent of residents who are Hispanic.',PCT],['white','White','Percent of residents who are non-Hispanic White.',PCT],
+    ['black','Black','Percent of residents who are Black.',PCT],['asian','Asian','Percent of residents who are Asian.',PCT],
+    ['amind','American Indian','Percent of residents who are American Indian.',PCT],['pacisl','Pacific Islander','Percent of residents who are Pacific Islander.',PCT],
+    ['othmult','Other / Multiple','Percent of residents who are other or multiple races.',PCT]]}
+];
+const META = {};
+GROUPS.forEach(g => g.items.forEach(([key, label, desc, unit]) => META[key] = {key, label, desc, unit, group:g}));
 
+function lerpRamp(stops, t) {
+  const rgb = stops.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+  t = Math.max(0, Math.min(1, t)) * (rgb.length - 1);
+  const i = Math.min(Math.floor(t), rgb.length - 2), f = t - i;
+  return 'rgb(' + rgb[i].map((c, j) => Math.round(c + (rgb[i + 1][j] - c) * f)).join(',') + ')';
+}
+const fmt = (k, v) => v == null ? 'n/a' : META[k].unit === P ? Math.round(v) : META[k].unit === PCT ? v + '%' : v.toLocaleString();
+const ordinal = n => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+const tractName = p => p.tract.slice(5, 9) + '.' + p.tract.slice(9);
+
+let DATA, BOUNDARY, dataMax = {}, selectedId = null, activeIdx = 0, split = false, hideBelow = false, syncing = false;
+
+function domainMax(key) {
+  const u = META[key].unit;
+  if (u === P) return 100;
+  const m = dataMax[key] || 100;
+  return u === N ? Math.ceil(m / 100) * 100 : Math.ceil(m);
+}
+function stepFor(key) { const u = META[key].unit; return u === P ? 5 : u === N ? 100 : 1; }
+
+class Panel {
+  constructor(i, key) {
+    this.i = i; this.key = key; this.cutoff = 0; this.byId = {};
+    this.map = L.map('map' + i, {zoomControl: i === 0}).setView([34.02, -118.3], 10);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 18
+    }).addTo(this.map);
+    this.legend = L.control({position: 'bottomright'});
+    this.legend.onAdd = () => this.legendEl = L.DomUtil.create('div', 'legend');
+    this.legend.addTo(this.map);
+    this.titleEl = document.querySelector('#pane' + i + ' .ptitle');
+    this.titleEl.onclick = () => setActive(i);
+    document.getElementById('pane' + i).addEventListener('pointerdown', () => setActive(i), true);
+    this.map.on('move', () => { if (split && !syncing) syncFrom(this); });
+  }
+  get meta() { return META[this.key]; }
+  value(f) { const v = f.properties[this.key]; return v == null ? null : v; }
+  style(f) {
+    const v = this.value(f), sel = f.properties.tract === selectedId;
+    let s;
+    if (v == null) s = {fillColor:'#999', fillOpacity:.15, color:'#888', weight:.4, opacity:1, dashArray:'2'};
+    else if (v >= this.cutoff) s = {fillColor: lerpRamp(this.meta.group.stops, v / domainMax(this.key)), fillOpacity:.8, color:'#333', weight:.6, opacity:.8};
+    else if (hideBelow) s = {fillOpacity:0, opacity:0, weight:0};
+    else s = {fillColor:'#bbb', fillOpacity:.12, color:'#aaa', weight:.3, opacity:.4};
+    if (sel) s = Object.assign(s, {color:'#000', weight:3, opacity:1});
+    return s;
+  }
+  build() {
+    this.layer = L.geoJSON(DATA, {
+      style: f => this.style(f),
+      onEachFeature: (f, l) => {
+        this.byId[f.properties.tract] = l;
+        l.on('click', () => selectTract(f.properties.tract));
+        l.bindTooltip(() => 'Tract ' + tractName(f.properties) + '<br>' + this.meta.label + ': <b>' + fmt(this.key, this.value(f)) + '</b>', {sticky:true});
+      }
+    }).addTo(this.map);
+    // city limits outline only, above the tracts and ignoring clicks
+    this.map.createPane('boundary').style.zIndex = 450;
+    L.geoJSON(BOUNDARY, {pane:'boundary', interactive:false, style:{fill:false, color:'#111', weight:2.5, opacity:.9}}).addTo(this.map);
+  }
+  matchCount() {
+    const vals = DATA.features.map(f => this.value(f)).filter(v => v != null);
+    return {n: vals.filter(v => v >= this.cutoff).length, total: vals.length};
+  }
+  refresh() {
+    this.layer.setStyle(f => this.style(f));
+    if (selectedId && this.byId[selectedId]) this.byId[selectedId].bringToFront();
+    const m = this.meta, max = domainMax(this.key), {n, total} = this.matchCount();
+    this.legendEl.innerHTML = '<b>' + m.label + '</b><div style="color:var(--muted)">' + (m.unit === P ? 'statewide percentile' : m.unit === PCT ? 'percent (ACS estimate)' : 'residents (ACS estimate)') +
+      '</div><div class="bar" style="background:linear-gradient(90deg,' + [0,.33,.66,1].map(t => lerpRamp(m.group.stops, t)).join(',') + ')"></div>' +
+      '<div class="ends"><span>0</span><span>' + max.toLocaleString() + '</span></div>' +
+      (this.cutoff > 0 ? '<div style="margin-top:4px;color:var(--muted)">Grey = below cutoff</div>' : '');
+    this.titleEl.style.setProperty('--c', m.group.color);
+    this.titleEl.innerHTML = '<b>' + (this.i ? 'Right: ' : 'Left: ') + m.label + '</b><small>' + m.group.name +
+      (this.cutoff > 0 ? ' · ≥ ' + this.cutoff + ': ' + n + ' of ' + total + ' tracts' : '') + '</small>';
+  }
+}
+
+let panels = [];
+const active = () => panels[activeIdx];
+
+function setActive(i) {
+  if (activeIdx === i && panels[i]) { return; }
+  activeIdx = i;
+  document.querySelectorAll('.pane').forEach((el, j) => el.classList.toggle('active', j === i));
+  document.querySelectorAll('#seg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.i === i));
+  syncControls();
+}
+
+function syncFrom(src) {
+  const other = panels[1 - src.i];
+  syncing = true;
+  other.map.setView(src.map.getCenter(), src.map.getZoom(), {animate:false});
+  syncing = false;
+}
+
+function describeCutoff(p) {
+  const m = p.meta, c = p.cutoff, {n, total} = p.matchCount();
+  let text;
+  if (c === 0) {
+    text = m.unit === P
+      ? 'Showing every tract. A percentile ranks a tract against all California tracts: the 90th percentile means more burdened than 90% of the state.'
+      : 'Showing every tract. Move the slider to only highlight tracts at or above a value.';
+  } else if (m.unit === P) {
+    text = c >= 100
+      ? 'These tracts rank at the very top of California (100th percentile) for ' + m.label + '.'
+      : 'These tracts rank in the top ' + (100 - c) + '% of California for ' + m.label + ' (' + ordinal(c) + ' percentile or higher).';
+  } else if (m.unit === PCT) {
+    text = 'These tracts have ' + m.label + ' of at least ' + c + '%.';
+  } else {
+    text = 'These tracts have at least ' + c.toLocaleString() + ' residents.';
+  }
+  document.getElementById('pctNote').textContent = text + ' ' + (c === 0 ? '' : n + ' of ' + total + ' LA tracts match.');
+  document.getElementById('stats').innerHTML = '<b>' + n + '</b> of ' + total + ' LA tracts at or above the cutoff (' + Math.round(100 * n / total) + '%)';
+}
+
+function syncControls() {
+  const p = active(), m = p.meta, slider = document.getElementById('min');
+  document.documentElement.style.setProperty('--cat', m.group.color);
+  document.querySelectorAll('button.chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === p.key));
+  slider.max = domainMax(p.key); slider.step = stepFor(p.key); slider.value = p.cutoff;
+  document.getElementById('minVal').textContent = m.unit === P ? ordinal(p.cutoff) + ' percentile' : m.unit === PCT ? p.cutoff + '%' : p.cutoff.toLocaleString();
+  document.getElementById('desc').textContent = m.desc;
+  describeCutoff(p);
+}
+
+function chooseIndicator(key) {
+  const p = active();
+  if (META[key].unit !== p.meta.unit) p.cutoff = 0;
+  p.key = key;
+  p.cutoff = Math.min(p.cutoff, domainMax(key));
+  p.refresh(); syncControls(); if (selectedId) showDetails();
+}
+
+function showDetails() {
+  const f = DATA.features.find(x => x.properties.tract === selectedId);
+  if (!f) return;
+  const p = f.properties;
+  let rows = '';
+  GROUPS.forEach(g => {
+    rows += '<tr class="gh" style="--c:' + g.color + '"><td colspan="2">' + g.name + '</td></tr>';
+    g.items.forEach(([k, label]) => rows += '<tr><td>' + label + '</td><td>' + fmt(k, p[k]) + '</td></tr>');
+  });
+  document.getElementById('details').innerHTML =
+    '<b>Tract ' + tractName(p) + '</b> · ' + (p.approx_loc || '') + ' ' + (p.zipcode || '') +
+    '<br><span style="color:var(--muted)">CES score ' + (p.CIscore ?? 'n/a') + ' · percentiles are statewide</span><table>' + rows + '</table>';
+}
+
+function selectTract(id) {
+  selectedId = id;
+  panels.forEach(p => p.refresh());
+  showDetails();
+}
+
+Promise.all([fetch('tracts.geojson'), fetch('city-boundary.geojson')].map(p => p.then(r => r.json()))).then(([data, boundary]) => {
+  DATA = data; BOUNDARY = boundary;
+  Object.keys(META).forEach(k => dataMax[k] = Math.max(...data.features.map(f => f.properties[k]).filter(v => v != null)));
+  panels = [new Panel(0, 'CIscoreP'), new Panel(1, 'povP')];
+  panels.forEach(p => p.build());
+  panels[0].map.fitBounds(panels[0].layer.getBounds());
+  panels.forEach(p => p.refresh());
+  syncControls();
+});
+
+// indicator buttons
+const gEl = document.getElementById('groups');
+GROUPS.forEach(g => {
+  const wrap = document.createElement('div');
+  wrap.style.setProperty('--c', g.color);
+  wrap.innerHTML = '<div class="gname">' + g.name + '</div>' + (g.note ? '<div class="gnote">' + g.note + '</div>' : '');
+  const chips = document.createElement('div'); chips.className = 'chips';
+  g.items.forEach(([k, label]) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = label; b.dataset.k = k; b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => chooseIndicator(k);
+    chips.appendChild(b);
+  });
+  wrap.appendChild(chips); gEl.appendChild(wrap);
+});
+
+document.getElementById('min').oninput = e => {
+  const p = active(); p.cutoff = +e.target.value; p.refresh(); syncControls();
+};
+document.getElementById('hide').onchange = e => { hideBelow = e.target.checked; panels.forEach(p => p.refresh()); };
+
+document.getElementById('splitToggle').onchange = e => {
+  split = e.target.checked;
+  document.getElementById('maps').classList.toggle('split', split);
+  document.getElementById('pane1').hidden = !split;
+  document.getElementById('seg').hidden = !split;
+  if (!split) setActive(0);
+  panels.forEach(p => p.map.invalidateSize());
+  panels[0].map.fitBounds(panels[0].layer.getBounds());
+  if (split) { syncFrom(panels[0]); setActive(1); }
+  panels.forEach(p => p.refresh());
+};
+document.querySelectorAll('#seg button').forEach(b => b.onclick = () => setActive(+b.dataset.i));
+
+document.getElementById('search').addEventListener('change', e => {
+  const raw = e.target.value.trim(), q = raw.replace('.', '').replace(/^0+/, '');
+  if (!q) return;
+  const hits = DATA.features.filter(f => f.properties.zipcode === raw || f.properties.tract.slice(5).replace(/^0+/, '') === q)
+    .map(f => panels[0].byId[f.properties.tract]);
+  if (!hits.length) { document.getElementById('details').textContent = 'No match for "' + raw + '".'; return; }
+  panels[0].map.fitBounds(L.featureGroup(hits).getBounds(), {maxZoom: 14});
+  selectTract(hits[0].feature.properties.tract);
+});
+</script>
 </body>
-
-
-    
+</html>
