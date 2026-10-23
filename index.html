@@ -160,6 +160,16 @@ const GROUPS = [
 const META = {};
 GROUPS.forEach(g => g.items.forEach(([key, label, desc, unit]) => META[key] = {key, label, desc, unit, group:g}));
 
+// how each percent-based ACS indicator reads in "These tracts ..." ({c} = cutoff)
+const PHRASE = {
+  edu:'have at least {c}% of adults without a high school diploma', ling:'have at least {c}% of households linguistically isolated',
+  pov:'have at least {c}% of residents below twice the poverty level', unemp:'have an unemployment rate of at least {c}%',
+  housingB:'have a housing burden of at least {c}%', pop_und10:'are at least {c}% under age 10', pop_10_64:'are at least {c}% aged 10–64',
+  pop_ov64:'are at least {c}% over age 64', hisp:'are at least {c}% Hispanic', white:'are at least {c}% White', black:'are at least {c}% Black',
+  asian:'are at least {c}% Asian', amind:'are at least {c}% American Indian', pacisl:'are at least {c}% Pacific Islander',
+  othmult:'are at least {c}% Other / Multiple race'
+};
+
 function lerpRamp(stops, t) {
   const rgb = stops.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
   t = Math.max(0, Math.min(1, t)) * (rgb.length - 1);
@@ -268,7 +278,7 @@ function describeCutoff(p) {
       ? 'These tracts rank at the very top of California (100th percentile) for ' + m.label + '.'
       : 'These tracts rank in the top ' + (100 - c) + '% of California for ' + m.label + ' (' + ordinal(c) + ' percentile or higher).';
   } else if (m.unit === PCT) {
-    text = 'These tracts have ' + m.label + ' of at least ' + c + '%.';
+    text = 'These tracts ' + (PHRASE[m.key] || 'have ' + m.label + ' of at least {c}%').replace('{c}', c) + '.';
   } else {
     text = 'These tracts have at least ' + c.toLocaleString() + ' residents.';
   }
