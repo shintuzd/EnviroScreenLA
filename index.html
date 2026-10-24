@@ -60,9 +60,12 @@
   #details table { width:100%; border-collapse:collapse; margin-top:6px; }
   #details td { padding:2px 0; } #details td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
   #details tr.gh td { padding-top:10px; font-weight:700; font-size:12px; color:var(--c); }
+  .maptip { display:none; position:absolute; z-index:1500; pointer-events:none; background:#fff; color:var(--text); border:1px solid var(--card-border); border-radius:8px; padding:6px 10px; font:12.5px/1.45 var(--font); box-shadow:0 2px 8px rgba(17,17,17,.15); white-space:nowrap; }
   .legend { background:#fff; color:var(--text); padding:8px 12px; border-radius:var(--radius); box-shadow:0 2px 8px rgba(17,17,17,.12); font-size:12px; font-family:var(--font); }
   .legend .bar { width:190px; height:10px; border-radius:2px; margin:4px 0 2px; }
   .legend .ends { display:flex; justify-content:space-between; color:var(--muted); }
+  .combo { margin-top:.8rem; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; }
+  .linkbtn { font:inherit; font-size:12px; color:var(--accent); background:none; border:0; padding:0; margin-top:.5rem; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
   .foot { font-size:12px; color:var(--muted); margin:1.5rem 0 0; }
   .foot a { color:var(--accent); }
   .credit { border-top:1px solid var(--border); padding-top:1rem; margin-top:1rem; }
@@ -82,8 +85,18 @@
   <p class="sub">CalEnviroScreen 5.0 on the City of Los Angeles' 2020 census tracts</p>
 
   <h2>Indicator</h2>
+  <div class="row" style="margin:0 0 .3rem"><input id="multiSel" type="checkbox"><label for="multiSel">Select multiple indicators</label></div>
+  <p class="gnote" id="multiHint" hidden style="margin:0 0 .3rem">Click indicators to add or remove them. They combine on the map, for example pollution and pesticides.</p>
   <div id="groups"></div>
   <p id="desc"></p>
+
+  <div class="combo" id="combo" hidden>
+    <div class="gnote" style="margin:0 0 .4rem">Combine as</div>
+    <div class="seg" id="modeSeg" style="margin-top:0">
+      <button data-m="min" aria-pressed="true">High in all</button>
+      <button data-m="avg" aria-pressed="false">Average</button>
+    </div>
+  </div>
 
   <h2>Filter</h2>
   <div class="filter">
@@ -180,7 +193,7 @@ const fmt = (k, v) => v == null ? 'n/a' : META[k].unit === P ? Math.round(v) : M
 const ordinal = n => { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
 const tractName = p => p.tract.slice(5, 9) + '.' + p.tract.slice(9);
 
-let DATA, BOUNDARY, dataMax = {}, selectedId = null, activeIdx = 0, split = false, hideBelow = false, syncing = false;
+let multiSelect = false, DATA, BOUNDARY, dataMax = {}, selectedId = null, activeIdx = 0, split = false, hideBelow = false, syncing = false;
 
 function domainMax(key) {
   const u = META[key].unit;
@@ -192,7 +205,7 @@ function stepFor(key) { const u = META[key].unit; return u === P ? 5 : u === N ?
 
 class Panel {
   constructor(i, key) {
-    this.i = i; this.key = key; this.cutoff = 0; this.byId = {};
+    this.i = i; this.keys = [key]; this.mode = 'min'; this.cutoff = 0; this.byId = {};
     this.map = L.map('map' + i, {zoomControl: i === 0}).setView([34.02, -118.3], 10);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 18
@@ -203,15 +216,35 @@ class Panel {
     this.titleEl = document.querySelector('#pane' + i + ' .ptitle');
     this.titleEl.onclick = () => setActive(i);
     document.getElementById('pane' + i).addEventListener('pointerdown', () => setActive(i), true);
+    this.tipEl = document.createElement('div'); this.tipEl.className = 'maptip';
+    this.map.getContainer().appendChild(this.tipEl);
+    this.map.on('mouseout movestart zoomstart', () => this.hideTip());
     this.map.on('move', () => { if (split && !syncing) syncFrom(this); });
   }
-  get meta() { return META[this.key]; }
-  value(f) { const v = f.properties[this.key]; return v == null ? null : v; }
+  get unit() { return META[this.keys[0]].unit; }
+  get multi() { return this.keys.length > 1; }
+  get group() {
+    const gs = new Set(this.keys.map(k => META[k].group));
+    return gs.size === 1 ? META[this.keys[0]].group : GROUPS[0];   // mixed categories fall back to the Overall palette
+  }
+  get groupName() { return this.multi ? 'Combined · ' + (new Set(this.keys.map(k => META[k].group)).size === 1 ? this.group.name : 'mixed categories') : this.group.name; }
+  get label() { return this.keys.map(k => META[k].label).join(' + '); }
+  get max() {
+    const ms = this.keys.map(domainMax);
+    return !this.multi ? ms[0] : this.mode === 'min' ? Math.min(...ms) : Math.ceil(ms.reduce((a, b) => a + b) / ms.length);
+  }
+  // single indicator: its value. Several: the lowest of them ("high in all") or their average.
+  value(f) {
+    const vs = this.keys.map(k => f.properties[k]);
+    if (vs.some(v => v == null)) return null;
+    if (vs.length === 1) return vs[0];
+    return this.mode === 'min' ? Math.min(...vs) : Math.round(vs.reduce((a, b) => a + b) / vs.length * 10) / 10;
+  }
   style(f) {
     const v = this.value(f), sel = f.properties.tract === selectedId;
     let s;
     if (v == null) s = {fillColor:'#999', fillOpacity:.15, color:'#888', weight:.4, opacity:1, dashArray:'2'};
-    else if (v >= this.cutoff) s = {fillColor: lerpRamp(this.meta.group.stops, v / domainMax(this.key)), fillOpacity:.8, color:'#333', weight:.6, opacity:.8};
+    else if (v >= this.cutoff) s = {fillColor: lerpRamp(this.group.stops, v / this.max), fillOpacity:.8, color:'#333', weight:.6, opacity:.8};
     else if (hideBelow) s = {fillOpacity:0, opacity:0, weight:0};
     else s = {fillColor:'#bbb', fillOpacity:.12, color:'#aaa', weight:.3, opacity:.4};
     if (sel) s = Object.assign(s, {color:'#000', weight:3, opacity:1});
@@ -223,13 +256,30 @@ class Panel {
       onEachFeature: (f, l) => {
         this.byId[f.properties.tract] = l;
         l.on('click', () => selectTract(f.properties.tract));
-        l.bindTooltip(() => 'Tract ' + tractName(f.properties) + '<br>' + this.meta.label + ': <b>' + fmt(this.key, this.value(f)) + '</b>', {sticky:true});
+        l.on('mouseover mousemove', e => this.showTip(f, e.containerPoint));
+        l.on('mouseout', () => this.hideTip());
       }
     }).addTo(this.map);
     // city limits outline only, above the tracts and ignoring clicks
     this.map.createPane('boundary').style.zIndex = 450;
     L.geoJSON(BOUNDARY, {pane:'boundary', interactive:false, style:{fill:false, color:'#111', weight:2.5, opacity:.9}}).addTo(this.map);
   }
+  // one shared tooltip per map (per-layer Leaflet tooltips could get stuck when moving fast across small tracts)
+  tipHTML(f) {
+    const k0 = this.keys[0], head = '<b>Tract ' + tractName(f.properties) + '</b>';
+    if (!this.multi) return head + '<br>' + META[k0].label + ': <b>' + fmt(k0, this.value(f)) + '</b>';
+    return head + this.keys.map(k => '<br>' + META[k].label + ': ' + fmt(k, f.properties[k])).join('') +
+      '<br>' + (this.mode === 'min' ? 'Lowest of these' : 'Average') + ': <b>' + fmt(k0, this.value(f)) + '</b>';
+  }
+  showTip(f, pt) {
+    const el = this.tipEl, box = this.map.getContainer();
+    el.innerHTML = this.tipHTML(f);
+    el.style.display = 'block';
+    const w = el.offsetWidth, h = el.offsetHeight;
+    el.style.left = (pt.x + 16 + w > box.clientWidth ? pt.x - 12 - w : pt.x + 16) + 'px';
+    el.style.top = (pt.y + 16 + h > box.clientHeight ? pt.y - 12 - h : pt.y + 16) + 'px';
+  }
+  hideTip() { this.tipEl.style.display = 'none'; }
   matchCount() {
     const vals = DATA.features.map(f => this.value(f)).filter(v => v != null);
     return {n: vals.filter(v => v >= this.cutoff).length, total: vals.length};
@@ -237,13 +287,14 @@ class Panel {
   refresh() {
     this.layer.setStyle(f => this.style(f));
     if (selectedId && this.byId[selectedId]) this.byId[selectedId].bringToFront();
-    const m = this.meta, max = domainMax(this.key), {n, total} = this.matchCount();
-    this.legendEl.innerHTML = '<b>' + m.label + '</b><div style="color:var(--muted)">' + (m.unit === P ? 'statewide percentile' : m.unit === PCT ? 'percent (ACS estimate)' : 'residents (ACS estimate)') +
-      '</div><div class="bar" style="background:linear-gradient(90deg,' + [0,.33,.66,1].map(t => lerpRamp(m.group.stops, t)).join(',') + ')"></div>' +
+    const u = this.unit, max = this.max, {n, total} = this.matchCount();
+    this.legendEl.innerHTML = '<b>' + this.label + '</b><div style="color:var(--muted)">' + (u === P ? 'statewide percentile' : u === PCT ? 'percent (ACS estimate)' : 'residents (ACS estimate)') +
+      (this.multi ? '<br>' + (this.mode === 'min' ? 'lowest of the selected' : 'average of the selected') : '') +
+      '</div><div class="bar" style="background:linear-gradient(90deg,' + [0,.33,.66,1].map(t => lerpRamp(this.group.stops, t)).join(',') + ')"></div>' +
       '<div class="ends"><span>0</span><span>' + max.toLocaleString() + '</span></div>' +
       (this.cutoff > 0 ? '<div style="margin-top:4px;color:var(--muted)">Grey = below cutoff</div>' : '');
-    this.titleEl.style.setProperty('--c', m.group.color);
-    this.titleEl.innerHTML = '<b>' + (this.i ? 'Right: ' : 'Left: ') + m.label + '</b><small>' + m.group.name +
+    this.titleEl.style.setProperty('--c', this.group.color);
+    this.titleEl.innerHTML = '<b>' + (this.i ? 'Right: ' : 'Left: ') + this.label + '</b><small>' + this.groupName +
       (this.cutoff > 0 ? ' · ≥ ' + this.cutoff + ': ' + n + ' of ' + total + ' tracts' : '') + '</small>';
   }
 }
@@ -266,19 +317,27 @@ function syncFrom(src) {
   syncing = false;
 }
 
+const listAnd = a => a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
+
 function describeCutoff(p) {
-  const m = p.meta, c = p.cutoff, {n, total} = p.matchCount();
+  const c = p.cutoff, {n, total} = p.matchCount(), u = p.unit, k0 = p.keys[0], lbl = listAnd(p.keys.map(k => META[k].label));
   let text;
   if (c === 0) {
-    text = m.unit === P
+    text = u === P
       ? 'Showing every tract. A percentile ranks a tract against all California tracts: the 90th percentile means more burdened than 90% of the state.'
       : 'Showing every tract. Move the slider to only highlight tracts at or above a value.';
-  } else if (m.unit === P) {
-    text = c >= 100
-      ? 'These tracts rank at the very top of California (100th percentile) for ' + m.label + '.'
-      : 'These tracts rank in the top ' + (100 - c) + '% of California for ' + m.label + ' (' + ordinal(c) + ' percentile or higher).';
-  } else if (m.unit === PCT) {
-    text = 'These tracts ' + (PHRASE[m.key] || 'have ' + m.label + ' of at least {c}%').replace('{c}', c) + '.';
+    if (p.multi) text += p.mode === 'min'
+      ? ' With several indicators selected, a tract is only as high as its lowest one, so dark tracts are high in all of them.'
+      : ' With several indicators selected, each tract shows the average of them.';
+  } else if (u === P) {
+    const top = c >= 100 ? 'at the very top of California (100th percentile)' : 'in the top ' + (100 - c) + '% of California';
+    text = !p.multi ? 'These tracts rank ' + top + ' for ' + lbl + (c >= 100 ? '' : ' (' + ordinal(c) + ' percentile or higher)') + '.'
+      : p.mode === 'min' ? 'These tracts rank ' + top + ' for all of: ' + lbl + '.'
+      : 'These tracts have an average percentile of ' + ordinal(c) + ' or higher across ' + lbl + '.';
+  } else if (u === PCT) {
+    text = !p.multi ? 'These tracts ' + (PHRASE[k0] || 'have ' + META[k0].label + ' of at least {c}%').replace('{c}', c) + '.'
+      : p.mode === 'min' ? 'These tracts are at least ' + c + '% on every one of: ' + lbl + '.'
+      : 'The average of ' + lbl + ' is at least ' + c + '% in these tracts.';
   } else {
     text = 'These tracts have at least ' + c.toLocaleString() + ' residents.';
   }
@@ -287,20 +346,33 @@ function describeCutoff(p) {
 }
 
 function syncControls() {
-  const p = active(), m = p.meta, slider = document.getElementById('min');
-  document.documentElement.style.setProperty('--cat', m.group.color);
-  document.querySelectorAll('button.chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === p.key));
-  slider.max = domainMax(p.key); slider.step = stepFor(p.key); slider.value = p.cutoff;
-  document.getElementById('minVal').textContent = m.unit === P ? ordinal(p.cutoff) + ' percentile' : m.unit === PCT ? p.cutoff + '%' : p.cutoff.toLocaleString();
-  document.getElementById('desc').textContent = m.desc;
+  const p = active(), u = p.unit, slider = document.getElementById('min');
+  document.documentElement.style.setProperty('--cat', p.group.color);
+  document.querySelectorAll('button.chip').forEach(b => b.setAttribute('aria-pressed', p.keys.includes(b.dataset.k)));
+  slider.max = Math.ceil(p.max); slider.step = stepFor(p.keys[0]); slider.value = p.cutoff;
+  document.getElementById('minVal').textContent = u === P ? ordinal(p.cutoff) + ' percentile' : u === PCT ? p.cutoff + '%' : p.cutoff.toLocaleString();
+  document.getElementById('desc').textContent = p.multi ? 'Combining ' + p.keys.length + ' indicators: ' + listAnd(p.keys.map(k => META[k].label)) + '.' : META[p.keys[0]].desc;
+  document.getElementById('combo').hidden = !p.multi;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === p.mode));
   describeCutoff(p);
 }
 
+// by default a click picks one indicator; with "Select multiple" on, it adds to (or removes from) the active map's selection.
+// Only indicators measured the same way can be combined, so a different type starts a new selection
 function chooseIndicator(key) {
-  const p = active();
-  if (META[key].unit !== p.meta.unit) p.cutoff = 0;
-  p.key = key;
-  p.cutoff = Math.min(p.cutoff, domainMax(key));
+  const p = active(), u = META[key].unit;
+  if (!multiSelect) {
+    if (u !== p.unit) p.cutoff = 0;
+    p.keys = [key];
+  } else if (p.keys.includes(key)) {
+    if (p.keys.length === 1) return;
+    p.keys = p.keys.filter(k => k !== key);
+  } else if (u !== p.unit || u === N) {
+    p.keys = [key]; p.cutoff = 0;
+  } else {
+    p.keys = [...p.keys, key];
+  }
+  p.cutoff = Math.min(p.cutoff, Math.ceil(p.max));
   p.refresh(); syncControls(); if (selectedId) showDetails();
 }
 
@@ -352,6 +424,17 @@ GROUPS.forEach(g => {
 
 document.getElementById('min').oninput = e => {
   const p = active(); p.cutoff = +e.target.value; p.refresh(); syncControls();
+};
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => {
+  const p = active(); p.mode = b.dataset.m; p.cutoff = Math.min(p.cutoff, Math.ceil(p.max)); p.refresh(); syncControls();
+});
+document.getElementById('multiSel').onchange = e => {
+  multiSelect = e.target.checked;
+  document.getElementById('multiHint').hidden = !multiSelect;
+  if (!multiSelect) panels.forEach(p => {   // back to one indicator per map: keep the last one clicked
+    p.keys = [p.keys[p.keys.length - 1]]; p.cutoff = Math.min(p.cutoff, Math.ceil(p.max)); p.refresh();
+  });
+  syncControls();
 };
 document.getElementById('hide').onchange = e => { hideBelow = e.target.checked; panels.forEach(p => p.refresh()); };
 
